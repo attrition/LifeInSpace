@@ -10,12 +10,8 @@ public class Thruster : MonoBehaviour
     {
         On = false;
     }
-
-    void Update()
-    {
-    }
-
-    public void SetOn(bool status)
+    
+    public void SetFiring(bool status)
     {
         On = status;
         this.gameObject.SetActive(On);

@@ -18,12 +18,13 @@ public class Ship : MonoBehaviour
     public float MaxLateralThrust = 25f;
 
     public float TotalForwardThrust = 0f;
-
     public float Speed = 0f;
     public float RotateSpeed = 1f;
 
     public bool InertialDampening = true; // whether or not to add friction to speed
     public float InertialFriction = 1f;
+    public bool AngularInertialDampening = true;
+    public float AngularInertialFriction = 1f;
 
     private Rigidbody shipbody = null;    
 
@@ -62,64 +63,62 @@ public class Ship : MonoBehaviour
     {        
         shipbody.mass = Mass;
         var lateralThrust = 0f;
-        var facing = false;
 
-        engineBurn.SetOn(false);
-        forwardLeftThruster.SetOn(false);
-        forwardRightThruster.SetOn(false);
-        backLeftThruster.SetOn(false);
-        backRightThruster.SetOn(false);
-        reverseThruster.SetOn(false);
+        engineBurn.SetFiring(false);
+        forwardLeftThruster.SetFiring(false);
+        forwardRightThruster.SetFiring(false);
+        backLeftThruster.SetFiring(false);
+        backRightThruster.SetFiring(false);
+        reverseThruster.SetFiring(false);
+        
+        if (Input.GetKeyDown(KeyCode.Z))
+        {
+            InertialDampening = false;
+            AngularInertialDampening = false;
+        }
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            InertialDampening = false;
+            AngularInertialDampening = true;
+        }
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            InertialDampening = true;
+            AngularInertialDampening = true;
+        }
 
-        InertialDampening = !(Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
         if (InertialDampening)
             shipbody.drag = InertialFriction;
         else
             shipbody.drag = 0f;
 
+        if (AngularInertialDampening)
+            shipbody.angularDrag = AngularInertialFriction;
+        else
+            shipbody.angularDrag = 0f;
+        
         // emergency full-stop
         if (Input.GetKey(KeyCode.Space))
         {
             shipbody.drag = InertialFriction * 4f;
+            shipbody.angularDrag = AngularInertialFriction * 4f;
+
             Thrust = 0f;
             ReverseThrust = 0f;
             TimeStartedThrusting = 0f;
             TimeStartedReversing = 0f;
 
-            forwardLeftThruster.SetOn(true);
-            forwardRightThruster.SetOn(true);
-            backLeftThruster.SetOn(true);
-            backRightThruster.SetOn(true);
-            reverseThruster.SetOn(true);
+            if (Speed > 1f)
+            {
+                forwardLeftThruster.SetFiring(true);
+                forwardRightThruster.SetFiring(true);
+                backLeftThruster.SetFiring(true);
+                backRightThruster.SetFiring(true);
+                reverseThruster.SetFiring(true);
+            }
         }
         else // regular ship handling
-        {
-            // face mouse position if rmb down
-            if (Input.GetMouseButton(1))
-            {
-                facing = true;
-
-                // rotate towards mouse cursor
-                var mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-                mouseWorldPos.y = 0f;
-
-
-                var direction = mouseWorldPos - this.transform.position;                
-                var rotateTowards = Quaternion.LookRotation(direction);
-
-                var rotateForce = Mathf.Min(RotateSpeed * Time.deltaTime, 1f);
-                this.transform.rotation = Quaternion.Lerp(this.transform.rotation, rotateTowards, rotateForce);
-
-                var turning = Vector3.Cross(direction, this.transform.forward).y;
-
-                if (turning > 2f)
-                    forwardRightThruster.SetOn(true);
-                if (turning < -2f)
-                    forwardLeftThruster.SetOn(true);
-            }
-            else
-                facing = false;
-
+        { 
             if (Input.GetKey(KeyCode.W))
             {
                 if (TimeStartedThrusting == 0f)
@@ -129,7 +128,7 @@ public class Ship : MonoBehaviour
                 if (Thrust > MaxThrust)
                     Thrust = MaxThrust;
 
-                engineBurn.SetOn(true);
+                engineBurn.SetFiring(true);
             }
             else
             {
@@ -146,7 +145,7 @@ public class Ship : MonoBehaviour
                 if (ReverseThrust > MaxReverseThrust)
                     ReverseThrust = MaxReverseThrust;
 
-                reverseThruster.SetOn(true);
+                reverseThruster.SetFiring(true);
             }
             else
             {
@@ -154,36 +153,52 @@ public class Ship : MonoBehaviour
                 ReverseThrust = 0f;
             }
 
-            if (Input.GetKey(KeyCode.A))
+            if (Input.GetKey(KeyCode.Q))
             {
                 lateralThrust = -MaxLateralThrust;
-                forwardRightThruster.SetOn(true);
-                backRightThruster.SetOn(true);
+                forwardRightThruster.SetFiring(true);
+                backRightThruster.SetFiring(true);
             }
-            if (Input.GetKey(KeyCode.D))
+            if (Input.GetKey(KeyCode.E))
             {
                 lateralThrust = MaxLateralThrust;
-                forwardLeftThruster.SetOn(true);
-                backLeftThruster.SetOn(true);
+                forwardLeftThruster.SetFiring(true);
+                backLeftThruster.SetFiring(true);
             }
-        }
-        if (Input.GetKey(KeyCode.Q) && !facing)
+        }        
 
+        if (Input.GetKey(KeyCode.D))
         {
-            var rotateTowards = Quaternion.LookRotation(-this.transform.right);
-            var rotateForce = Mathf.Min((RotateSpeed / 3f) * Time.deltaTime, 1f);
-            this.transform.rotation = Quaternion.Lerp(this.transform.rotation, rotateTowards, rotateForce);
-
-            forwardRightThruster.SetOn(true);
+            shipbody.AddRelativeTorque(this.transform.up * RotateSpeed, ForceMode.Impulse);
+            forwardLeftThruster.SetFiring(true);
         }
 
-        if (Input.GetKey(KeyCode.E) && !facing)
+        if (Input.GetKey(KeyCode.A))
         {
-            var rotateTowards = Quaternion.LookRotation(this.transform.right);
-            var rotateForce = Mathf.Min((RotateSpeed / 3f) * Time.deltaTime, 1f);
-            this.transform.rotation = Quaternion.Lerp(this.transform.rotation, rotateTowards, rotateForce);
+            shipbody.AddTorque(this.transform.up * -RotateSpeed, ForceMode.Impulse);
+            forwardRightThruster.SetFiring(true);
+        }
 
-            forwardLeftThruster.SetOn(true);
+        if (Input.GetKey(KeyCode.F))
+        {
+            var turning = Vector3.Cross(shipbody.velocity, this.transform.forward).y;
+            shipbody.angularDrag = InertialFriction * 8f;
+
+            if (Input.GetKey(KeyCode.LeftShift))
+                turning = -turning;
+
+            if (turning > 0.65f)
+            {
+                shipbody.AddTorque(this.transform.up * RotateSpeed * 4f, ForceMode.Impulse);
+                forwardLeftThruster.SetFiring(true);
+                backRightThruster.SetFiring(true);
+            }
+            if (turning < -0.65f)
+            {
+                shipbody.AddTorque(this.transform.up * -RotateSpeed * 4f, ForceMode.Impulse);                
+                forwardRightThruster.SetFiring(true);
+                backLeftThruster.SetFiring(true);
+            }
         }
 
         TotalForwardThrust = Thrust - ReverseThrust;
