@@ -15,6 +15,7 @@ public class Ship : MonoBehaviour
     public float SecondsToMaxReverseThrust = 1f;
     public float TimeStartedReversing = 0f;
 
+    public float LateralThrust = 0f;
     public float MaxLateralThrust = 25f;
 
     public float TotalForwardThrust = 0f;
@@ -62,7 +63,7 @@ public class Ship : MonoBehaviour
     void Update()
     {        
         shipbody.mass = Mass;
-        var lateralThrust = 0f;
+        LateralThrust = 0f;
 
         engineBurn.SetFiring(false);
         forwardLeftThruster.SetFiring(false);
@@ -129,6 +130,7 @@ public class Ship : MonoBehaviour
                     Thrust = MaxThrust;
 
                 engineBurn.SetFiring(true);
+                shipbody.drag = 0f;
             }
             else
             {
@@ -146,6 +148,7 @@ public class Ship : MonoBehaviour
                     ReverseThrust = MaxReverseThrust;
 
                 reverseThruster.SetFiring(true);
+                shipbody.drag = 0f;
             }
             else
             {
@@ -155,26 +158,30 @@ public class Ship : MonoBehaviour
 
             if (Input.GetKey(KeyCode.Q))
             {
-                lateralThrust = -MaxLateralThrust;
+                LateralThrust -= MaxLateralThrust;
                 forwardRightThruster.SetFiring(true);
                 backRightThruster.SetFiring(true);
+                shipbody.drag = 0f;
             }
             if (Input.GetKey(KeyCode.E))
             {
-                lateralThrust = MaxLateralThrust;
+                LateralThrust += MaxLateralThrust;
                 forwardLeftThruster.SetFiring(true);
                 backLeftThruster.SetFiring(true);
+                shipbody.drag = 0f;
             }
         }        
 
         if (Input.GetKey(KeyCode.D))
         {
+            shipbody.angularDrag = 0f;
             shipbody.AddRelativeTorque(this.transform.up * RotateSpeed, ForceMode.Impulse);
             forwardLeftThruster.SetFiring(true);
         }
 
         if (Input.GetKey(KeyCode.A))
         {
+            shipbody.angularDrag = 0f;
             shipbody.AddTorque(this.transform.up * -RotateSpeed, ForceMode.Impulse);
             forwardRightThruster.SetFiring(true);
         }
@@ -205,8 +212,8 @@ public class Ship : MonoBehaviour
         if (TotalForwardThrust != 0f)
             shipbody.AddForce(this.transform.forward * TotalForwardThrust, ForceMode.Impulse);
 
-        if (lateralThrust != 0f)
-            shipbody.AddRelativeForce(lateralThrust, 0f, 0f, ForceMode.Impulse);
+        if (LateralThrust != 0f)
+            shipbody.AddRelativeForce(LateralThrust, 0f, 0f, ForceMode.Impulse);
 
         Speed = shipbody.velocity.magnitude;
     }
