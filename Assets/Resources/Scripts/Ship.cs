@@ -3,6 +3,8 @@ using System.Collections;
 
 public class Ship : MonoBehaviour
 {
+    public bool playerControlled = false;
+
     public float Mass = 40f; // in kT
 
     public float Thrust = 0f; // current thrust (0 up to MaxThrust)
@@ -20,12 +22,15 @@ public class Ship : MonoBehaviour
 
     public float TotalForwardThrust = 0f;
     public float Speed = 0f;
-    public float RotateSpeed = 1f;
+    public float RotateSpeed = 8f;
 
     public bool InertialDampening = true; // whether or not to add friction to speed
     public float InertialFriction = 1f;
     public bool AngularInertialDampening = true;
-    public float AngularInertialFriction = 1f;
+    public float AngularInertialFriction = 3f;
+    public float BreakingFrictionMultiplier = 4f;
+
+    public float DesiredCameraOrthoSize = 150f;
 
     private Rigidbody shipbody = null;    
 
@@ -35,6 +40,7 @@ public class Ship : MonoBehaviour
     private Thruster backLeftThruster = null;
     private Thruster backRightThruster = null;
     private Thruster reverseThruster = null;
+
 
     // Use this for initialization
     void Start()
@@ -56,14 +62,18 @@ public class Ship : MonoBehaviour
                 backRightThruster = thruster;
             else if (thruster.name == "ReverseThruster")
                 reverseThruster = thruster;
+            thruster.SetFiring(false);
         }
     }
 
     // Update is called once per frame
     void Update()
-    {        
+    {
         shipbody.mass = Mass;
         LateralThrust = 0f;
+
+        if (!playerControlled)
+            return;
 
         engineBurn.SetFiring(false);
         forwardLeftThruster.SetFiring(false);
@@ -101,16 +111,17 @@ public class Ship : MonoBehaviour
         // emergency full-stop
         if (Input.GetKey(KeyCode.Space))
         {
-            shipbody.drag = InertialFriction * 4f;
-            shipbody.angularDrag = AngularInertialFriction * 4f;
+            shipbody.drag = InertialFriction * BreakingFrictionMultiplier;
+            shipbody.angularDrag = AngularInertialFriction * BreakingFrictionMultiplier;
 
             Thrust = 0f;
             ReverseThrust = 0f;
             TimeStartedThrusting = 0f;
             TimeStartedReversing = 0f;
 
-            if (Speed > 1f)
+            if (Speed > 0.001f || shipbody.angularVelocity.magnitude > 0.001f)
             {
+                engineBurn.SetFiring(true);
                 forwardLeftThruster.SetFiring(true);
                 forwardRightThruster.SetFiring(true);
                 backLeftThruster.SetFiring(true);
@@ -175,15 +186,15 @@ public class Ship : MonoBehaviour
         if (Input.GetKey(KeyCode.D))
         {
             shipbody.angularDrag = 0f;
-            shipbody.AddRelativeTorque(this.transform.up * RotateSpeed, ForceMode.Impulse);
-            forwardLeftThruster.SetFiring(true);
+            shipbody.AddRelativeTorque(this.transform.up * RotateSpeed, ForceMode.Force);
+            backRightThruster.SetFiring(true);
         }
 
         if (Input.GetKey(KeyCode.A))
         {
             shipbody.angularDrag = 0f;
-            shipbody.AddTorque(this.transform.up * -RotateSpeed, ForceMode.Impulse);
-            forwardRightThruster.SetFiring(true);
+            shipbody.AddTorque(this.transform.up * -RotateSpeed, ForceMode.Force);
+            backLeftThruster.SetFiring(true);
         }
 
         if (Input.GetKey(KeyCode.F))
@@ -196,13 +207,13 @@ public class Ship : MonoBehaviour
 
             if (turning > 0.65f)
             {
-                shipbody.AddTorque(this.transform.up * RotateSpeed * 4f, ForceMode.Impulse);
+                shipbody.AddTorque(this.transform.up * RotateSpeed * BreakingFrictionMultiplier, ForceMode.Force);
                 forwardLeftThruster.SetFiring(true);
                 backRightThruster.SetFiring(true);
             }
             if (turning < -0.65f)
             {
-                shipbody.AddTorque(this.transform.up * -RotateSpeed * 4f, ForceMode.Impulse);                
+                shipbody.AddTorque(this.transform.up * -RotateSpeed * BreakingFrictionMultiplier, ForceMode.Force);                
                 forwardRightThruster.SetFiring(true);
                 backLeftThruster.SetFiring(true);
             }
@@ -210,10 +221,10 @@ public class Ship : MonoBehaviour
 
         TotalForwardThrust = Thrust - ReverseThrust;
         if (TotalForwardThrust != 0f)
-            shipbody.AddForce(this.transform.forward * TotalForwardThrust, ForceMode.Impulse);
+            shipbody.AddForce(this.transform.forward * TotalForwardThrust, ForceMode.Force);
 
         if (LateralThrust != 0f)
-            shipbody.AddRelativeForce(LateralThrust, 0f, 0f, ForceMode.Impulse);
+            shipbody.AddRelativeForce(LateralThrust, 0f, 0f, ForceMode.Force);
 
         Speed = shipbody.velocity.magnitude;
     }

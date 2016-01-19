@@ -5,17 +5,15 @@ public class ShipFollowCamera : MonoBehaviour
 {
     public Camera ActiveCamera = null;
     public Transform Ship = null;
-    public float FollowHeight = 100f;
-    public float OrthoSizeAtIdle = 50f;
-    public float OrthoSizeAtMax = 200f;
-    public float OrthoLerpTime = 2f;
+    public float FollowHeight = 200f;
+    public float OrthoSize = 150f;
 
-    //private Ship following;
+    private Ship following;
 
     // Use this for initialization
     void Start()
     {
-        //following = Ship.gameObject.GetComponent<Ship>();
+        following = Ship.gameObject.GetComponent<Ship>();
     }
 
     // Update is called once per frame
@@ -25,10 +23,9 @@ public class ShipFollowCamera : MonoBehaviour
             return;
 
         ActiveCamera.transform.position = Ship.transform.position;
-        ActiveCamera.transform.position += new Vector3(0f, FollowHeight);
-        
+        ActiveCamera.transform.position += new Vector3(0f, FollowHeight);        
+        ActiveCamera.orthographicSize = following.DesiredCameraOrthoSize;
     }
-
 
     private float RemapRange(float remapValue, float oldMin, float oldMax, float newMin, float newMax)
     {
