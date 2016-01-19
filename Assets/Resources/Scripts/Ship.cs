@@ -45,7 +45,7 @@ public class Ship : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        shipbody = this.gameObject.GetComponentInChildren<Rigidbody>();
+        shipbody = this.gameObject.GetComponent<Rigidbody>();
 
         var thrusters = this.gameObject.GetComponentsInChildren<Thruster>();
         foreach (var thruster in thrusters)
